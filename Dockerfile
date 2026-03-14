@@ -23,7 +23,6 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-ENV PORT=3000
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -39,5 +38,5 @@ COPY --from=deps /app/node_modules/@napi-rs ./node_modules/@napi-rs
 RUN mkdir -p /data && chown nextjs:nodejs /data
 USER nextjs
 
-EXPOSE 3000
+EXPOSE 8080
 CMD ["node", "server.js"]
