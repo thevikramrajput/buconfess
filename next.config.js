@@ -1,11 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    serverComponentsExternalPackages: ['canvas', '@prisma/client'],
+    serverComponentsExternalPackages: ['@napi-rs/canvas', '@prisma/client'],
   },
-  images: {
-    domains: ['localhost'],
-  },
+  images: { domains: ['localhost'] },
 };
-
 module.exports = nextConfig;
