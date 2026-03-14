@@ -2,19 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAdminFromRequest } from '@/lib/auth';
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const isAdmin = await getAdminFromRequest();
   if (!isAdmin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const id = parseInt(params.id);
+  const { id } = await params;
+  const numId = parseInt(id);
   const body = await req.json();
-  const confession = await prisma.confession.update({ where: { id }, data: body });
+  const confession = await prisma.confession.update({ where: { id: numId }, data: body });
   return NextResponse.json(confession);
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const isAdmin = await getAdminFromRequest();
   if (!isAdmin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const id = parseInt(params.id);
-  await prisma.confession.delete({ where: { id } });
-  return NextResponse.json({ success: true });
+  const { id } = await params;
+  const numId = parseInt(id);
+  await prisma.confession.delete({ where: { id: numId } });
+  return NextResponse.json({ ok: true });
 }
