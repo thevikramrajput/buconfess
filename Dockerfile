@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 FROM node:20-slim AS base
 RUN apt-get update -y && apt-get install -y \
   openssl libcairo2 libpango1.0-0 libjpeg-dev libgif-dev librsvg2-dev \
@@ -35,9 +34,11 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=deps /app/node_modules/@napi-rs ./node_modules/@napi-rs
+COPY --from=builder /app/seed.js ./seed.js
+COPY --from=deps /app/node_modules/bcryptjs ./node_modules/bcryptjs
 
 RUN mkdir -p /data && chown nextjs:nodejs /data
 USER nextjs
 
 EXPOSE 8080
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "node /app/seed.js && exec node /app/server.js"]
