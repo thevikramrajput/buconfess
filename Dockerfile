@@ -38,6 +38,8 @@ COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=deps /app/node_modules/bcryptjs ./node_modules/bcryptjs
 COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
+COPY --from=deps /app/node_modules/prisma ./node_modules/prisma
+COPY --from=deps /app/node_modules/.bin ./node_modules/.bin
 COPY --from=builder /app/seed.js ./seed.js
 
 RUN mkdir -p /data && chown nextjs:nodejs /data
@@ -45,4 +47,4 @@ USER nextjs
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node /app/seed.js && exec node /app/server.js"]
+CMD ["sh", "-c", "node /app/node_modules/.bin/prisma migrate deploy && node /app/seed.js && exec node /app/server.js"]
