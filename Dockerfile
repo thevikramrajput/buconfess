@@ -47,4 +47,5 @@ USER nextjs
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "node /app/node_modules/.bin/prisma migrate deploy && node /app/seed.js && exec node /app/server.js"]
+COPY --from=builder /app/entrypoint.sh ./entrypoint.sh
+CMD ["sh", "/app/entrypoint.sh"]
