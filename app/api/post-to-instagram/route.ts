@@ -4,94 +4,108 @@ import { getAdminFromRequest } from '@/lib/auth';
 
 const IG_API = 'https://graph.facebook.com/v20.0';
 
-async function createMediaContainer(imageUrl: string, isCarouselItem = false, caption = '') {
-  const token = process.env.INSTAGRAM_ACCESS_TOKEN;
-  const userId = process.env.INSTAGRAM_USER_ID;
-  const params: any = { image_url: imageUrl, access_token: token };
-  if (isCarouselItem) {
-    params.is_carousel_item = true;
-  } else {
-    params.caption = caption;
-  }
-  const res = await fetch(IG_API + '/' + userId + '/media', {
+async function createMediaContainer(
+  imageUrl: string,
+  isCarouselItem: boolean,
+  caption?: string
+) {
+  const token = process.env.INSTAGRAM_ACCESS_TOKEN!;
+  const userId = process.env.INSTAGRAM_USER_ID!;
+  const body: any = { image_url: imageUrl, access_token: token };
+  if (isCarouselItem) body.is_carousel_item = true;
+  else if (caption) body.caption = caption;
+
+  const res = await fetch(`${IG_API}/${userId}/media`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
+    body: JSON.stringify(body),
   });
   const data = await res.json();
-  if (!data.id) throw new Error('Failed to create media container: ' + JSON.stringify(data));
-  return data.id;
+  if (!res.ok || data.error) throw new Error(data.error?.message || 'Failed to create media container');
+  return data.id as string;
 }
 
-async function createCarouselContainer(childIds: string[], caption: string) {
-  const token = process.env.INSTAGRAM_ACCESS_TOKEN;
-  const userId = process.env.INSTAGRAM_USER_ID;
-  const res = await fetch(IG_API + '/' + userId + '/media', {
+async function publishCarousel(children: string[], caption: string) {
+  const token = process.env.INSTAGRAM_ACCESS_TOKEN!;
+  const userId = process.env.INSTAGRAM_USER_ID!;
+  const res = await fetch(`${IG_API}/${userId}/media`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       media_type: 'CAROUSEL',
-      children: childIds.join(','),
+      children: children.join(','),
       caption,
       access_token: token,
     }),
   });
   const data = await res.json();
-  if (!data.id) throw new Error('Failed to create carousel: ' + JSON.stringify(data));
-  return data.id;
+  if (!res.ok || data.error) throw new Error(data.error?.message || 'Failed to create carousel');
+  return data.id as string;
 }
 
-async function publishMedia(creationId: string) {
-  const token = process.env.INSTAGRAM_ACCESS_TOKEN;
-  const userId = process.env.INSTAGRAM_USER_ID;
-  const res = await fetch(IG_API + '/' + userId + '/media_publish', {
+async function publishMedia(containerId: string) {
+  const token = process.env.INSTAGRAM_ACCESS_TOKEN!;
+  const userId = process.env.INSTAGRAM_USER_ID!;
+  const res = await fetch(`${IG_API}/${userId}/media_publish`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ creation_id: creationId, access_token: token }),
+    body: JSON.stringify({ creation_id: containerId, access_token: token }),
   });
-  return res.json();
+  const data = await res.json();
+  if (!res.ok || data.error) throw new Error(data.error?.message || 'Failed to publish');
+  return data;
 }
 
 export async function POST(req: NextRequest) {
   const isAdmin = await getAdminFromRequest();
   if (!isAdmin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const token = process.env.INSTAGRAM_ACCESS_TOKEN;
+  const userId = process.env.INSTAGRAM_USER_ID;
+  if (!token || !userId) {
+    return NextResponse.json({ error: 'Instagram credentials not configured. Set INSTAGRAM_ACCESS_TOKEN and INSTAGRAM_USER_ID in Railway variables.' }, { status: 500 });
+  }
+
   const { id } = await req.json();
   const confession = await prisma.confession.findUnique({ where: { id } });
   if (!confession) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  if (confession.status === 'posted') return NextResponse.json({ error: 'Already posted' }, { status: 400 });
 
-  const imageUrls: string[] = JSON.parse(confession.imageUrls || '[]');
-  if (!imageUrls.length) return NextResponse.json({ error: 'No images generated yet' }, { status: 400 });
-
-  const caption = (process.env.IG_CAPTION_PREFIX || 'BU Confession') + ' #' + String(confession.number) + '\n\n' + (process.env.IG_HANDLE || '@bu.confess');
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://buconfess-production.up.railway.app';
+  const parts: string[] = confession.parts ? JSON.parse(confession.parts) : [confession.text];
+  const handle = process.env.IG_HANDLE || '@bu.confess';
+  const prefix = process.env.IG_CAPTION_PREFIX || '';
+  const caption = `${prefix}Confession #${confession.number}\n\nDM or visit the link in bio to submit yours!\n\n${handle}`;
 
   try {
-    let creationId: string;
-    if (imageUrls.length === 1) {
+    let igPostId: string;
+
+    if (parts.length === 1) {
       // Single image post
-      creationId = await createMediaContainer(imageUrls[0], false, caption);
+      const imageUrl = `${appUrl}/api/image/${id}/0`;
+      const containerId = await createMediaContainer(imageUrl, false, caption);
+      const result = await publishMedia(containerId);
+      igPostId = result.id;
     } else {
-      // Carousel post
+      // Carousel post for multi-part confessions
       const childIds: string[] = [];
-      for (const url of imageUrls) {
-        const childId = await createMediaContainer(url, true);
+      for (let i = 0; i < parts.length; i++) {
+        const imageUrl = `${appUrl}/api/image/${id}/${i}`;
+        const childId = await createMediaContainer(imageUrl, true);
         childIds.push(childId);
       }
-      creationId = await createCarouselContainer(childIds, caption);
+      const carouselId = await publishCarousel(childIds, caption);
+      const result = await publishMedia(carouselId);
+      igPostId = result.id;
     }
-
-    const publishResult = await publishMedia(creationId);
-    if (!publishResult.id) throw new Error('Publish failed: ' + JSON.stringify(publishResult));
 
     await prisma.confession.update({
       where: { id },
-      data: { status: 'posted', igPostId: publishResult.id },
+      data: { status: 'posted', igPostId },
     });
 
-    return NextResponse.json({ success: true, igPostId: publishResult.id });
+    return NextResponse.json({ success: true, igPostId });
   } catch (e: any) {
-    console.error('Instagram API error:', e);
+    console.error('Instagram API error:', e.message);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

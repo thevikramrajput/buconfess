@@ -1,6 +1,4 @@
 import { createCanvas } from '@napi-rs/canvas';
-import fs from 'fs';
-import path from 'path';
 
 const CANVAS_SIZE = 1080;
 const PADDING = 80;
@@ -17,9 +15,7 @@ export function splitTextIntoParts(text: string): string[] {
       parts.push(remaining);
       break;
     }
-    let splitAt = MAX_CHARS_PER_IMAGE;
-    // Find last space before limit
-    while (splitAt > 0 && remaining[splitAt] !== ' ') splitAt--;
+    let splitAt = remaining.lastIndexOf(' ', MAX_CHARS_PER_IMAGE);
     if (splitAt === 0) splitAt = MAX_CHARS_PER_IMAGE;
     parts.push(remaining.slice(0, splitAt).trim());
     remaining = remaining.slice(splitAt).trim();
@@ -30,81 +26,98 @@ export function splitTextIntoParts(text: string): string[] {
 function wrapText(ctx: any, text: string, maxWidth: number): string[] {
   const words = text.split(' ');
   const lines: string[] = [];
-  let currentLine = '';
+  let current = '';
   for (const word of words) {
-    const testLine = currentLine ? currentLine + ' ' + word : word;
-    const metrics = ctx.measureText(testLine);
-    if (metrics.width > maxWidth && currentLine) {
-      lines.push(currentLine);
-      currentLine = word;
+    const test = current ? current + ' ' + word : word;
+    if (ctx.measureText(test).width > maxWidth && current) {
+      lines.push(current);
+      current = word;
     } else {
-      currentLine = testLine;
+      current = test;
     }
   }
-  if (currentLine) lines.push(currentLine);
+  if (current) lines.push(current);
   return lines;
 }
 
+// Returns a Buffer - no file system, no DB storage needed
 export async function generateConfessionImage(
   text: string,
   confessionNumber: number,
   partIndex: number,
-  totalParts: number,
-  outputDir: string
-): Promise<string> {
+  totalParts: number
+): Promise<Buffer> {
   const canvas = createCanvas(CANVAS_SIZE, CANVAS_SIZE);
   const ctx = canvas.getContext('2d');
 
-  // Background gradient
-  const gradient = ctx.createLinearGradient(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-  gradient.addColorStop(0, '#0f0f23');
-  gradient.addColorStop(1, '#1a1a3e');
-  ctx.fillStyle = gradient;
+  // Background gradient: dark purple
+  const grad = ctx.createLinearGradient(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  grad.addColorStop(0, '#1a0533');
+  grad.addColorStop(1, '#2d0a4e');
+  ctx.fillStyle = grad;
   ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-  // Top accent line
-  ctx.fillStyle = '#6366f1';
-  ctx.fillRect(PADDING, 60, 80, 4);
+  // Subtle grid pattern
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < CANVAS_SIZE; i += 60) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, CANVAS_SIZE); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(CANVAS_SIZE, i); ctx.stroke();
+  }
 
-  // Header
-  ctx.fillStyle = '#6366f1';
-  ctx.font = 'bold 28px Arial';
-  ctx.fillText('BU Confessions', PADDING, 55);
+  // Top accent bar
+  const accentGrad = ctx.createLinearGradient(0, 0, CANVAS_SIZE, 0);
+  accentGrad.addColorStop(0, '#9b59b6');
+  accentGrad.addColorStop(1, '#e91e8c');
+  ctx.fillStyle = accentGrad;
+  ctx.fillRect(PADDING, PADDING, CANVAS_SIZE - PADDING * 2, 6);
+
+  // Header: BU Confessions
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 28px sans-serif';
+  ctx.fillText('BU Confessions', PADDING, PADDING + 50);
 
   // Confession number
-  ctx.fillStyle = '#888';
-  ctx.font = '22px Arial';
+  ctx.fillStyle = '#e91e8c';
+  ctx.font = 'bold 22px sans-serif';
   const partLabel = totalParts > 1 ? ` (${partIndex + 1}/${totalParts})` : '';
-  ctx.fillText(`#${confessionNumber}${partLabel}`, CANVAS_SIZE - PADDING - 120, 55);
+  ctx.fillText(`#${confessionNumber}${partLabel}`, PADDING, PADDING + 80);
 
-  // Main text
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `${FONT_SIZE}px Arial`;
-  const maxWidth = CANVAS_SIZE - PADDING * 2;
-  const lines = wrapText(ctx, text, maxWidth);
-  const totalTextHeight = lines.length * LINE_HEIGHT;
-  const startY = (CANVAS_SIZE - totalTextHeight) / 2;
-
-  lines.forEach((line, i) => {
-    ctx.fillText(line, PADDING, startY + i * LINE_HEIGHT);
-  });
-
-  // Footer
-  ctx.fillStyle = '#555';
-  ctx.font = '22px Arial';
-  ctx.fillText('@bu.confess', PADDING, CANVAS_SIZE - 50);
-
-  // Watermark dots
-  ctx.fillStyle = '#6366f1';
+  // Divider
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.arc(CANVAS_SIZE - 60, CANVAS_SIZE - 50, 6, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.moveTo(PADDING, PADDING + 100);
+  ctx.lineTo(CANVAS_SIZE - PADDING, PADDING + 100);
+  ctx.stroke();
 
-  // Save file
-  fs.mkdirSync(outputDir, { recursive: true });
-  const filename = `confession_${confessionNumber}_part${partIndex + 1}.jpg`;
-  const filepath = path.join(outputDir, filename);
-  const buffer = (canvas as any).toBuffer('image/jpeg', 95);
-  fs.writeFileSync(filepath, buffer);
-  return filepath;
+  // Confession text
+  ctx.fillStyle = '#f0e6ff';
+  ctx.font = `${FONT_SIZE}px sans-serif`;
+  const maxTextWidth = CANVAS_SIZE - PADDING * 2;
+  const lines = wrapText(ctx, text, maxTextWidth);
+  let y = PADDING + 150;
+  for (const line of lines) {
+    if (y + LINE_HEIGHT > CANVAS_SIZE - PADDING - 60) {
+      ctx.fillStyle = 'rgba(240,230,255,0.5)';
+      ctx.font = '28px sans-serif';
+      ctx.fillText('...', PADDING, y);
+      break;
+    }
+    ctx.fillStyle = '#f0e6ff';
+    ctx.font = `${FONT_SIZE}px sans-serif`;
+    ctx.fillText(line, PADDING, y);
+    y += LINE_HEIGHT;
+  }
+
+  // Bottom: @bu.confess handle
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = '24px sans-serif';
+  ctx.fillText('@bu.confess', PADDING, CANVAS_SIZE - PADDING);
+
+  // Bottom accent bar
+  ctx.fillStyle = accentGrad;
+  ctx.fillRect(PADDING, CANVAS_SIZE - PADDING - 10, CANVAS_SIZE - PADDING * 2, 4);
+
+  return canvas.toBuffer('image/jpeg', 85) as unknown as Buffer;
 }
