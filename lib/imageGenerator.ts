@@ -104,7 +104,7 @@ export async function generateConfessionImage(
   fs.mkdirSync(outputDir, { recursive: true });
   const filename = `confession_${confessionNumber}_part${partIndex + 1}.jpg`;
   const filepath = path.join(outputDir, filename);
-  const buffer = canvas.toBuffer('image/jpeg', { quality: 0.95 });
+  const buffer = (canvas as any).toBuffer('image/jpeg', 95);
   fs.writeFileSync(filepath, buffer);
   return filepath;
 }

@@ -64,9 +64,7 @@ export async function POST(req: NextRequest) {
   const imageUrls: string[] = JSON.parse(confession.imageUrls || '[]');
   if (!imageUrls.length) return NextResponse.json({ error: 'No images generated yet' }, { status: 400 });
 
-  const caption = (process.env.IG_CAPTION_PREFIX || 'BU Confession') + ' #' + confession.number + '
-
-' + (process.env.IG_HANDLE || '@bu.confess');
+  const caption = (process.env.IG_CAPTION_PREFIX || 'BU Confession') + ' #' + String(confession.number) + '\n\n' + (process.env.IG_HANDLE || '@bu.confess');
 
   try {
     let creationId: string;
