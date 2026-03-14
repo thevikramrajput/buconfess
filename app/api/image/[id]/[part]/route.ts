@@ -25,7 +25,7 @@ export async function GET(
     parts.length
   );
 
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     status: 200,
     headers: {
       'Content-Type': 'image/jpeg',
