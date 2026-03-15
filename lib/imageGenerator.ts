@@ -74,12 +74,12 @@ export async function generateConfessionImage(
 
   // Header: BU Confessions
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 28px sans-serif';
+  ctx.font = 'bold 28px DejaVu Sans';
   ctx.fillText('BU Confessions', PADDING, PADDING + 50);
 
   // Confession number
   ctx.fillStyle = '#e91e8c';
-  ctx.font = 'bold 22px sans-serif';
+  ctx.font = 'bold 22px DejaVu Sans';
   const partLabel = totalParts > 1 ? ` (${partIndex + 1}/${totalParts})` : '';
   ctx.fillText(`#${confessionNumber}${partLabel}`, PADDING, PADDING + 80);
 
@@ -93,26 +93,26 @@ export async function generateConfessionImage(
 
   // Confession text
   ctx.fillStyle = '#f0e6ff';
-  ctx.font = `${FONT_SIZE}px sans-serif`;
+  ctx.font = `${FONT_SIZE}px DejaVu Sans`;
   const maxTextWidth = CANVAS_SIZE - PADDING * 2;
   const lines = wrapText(ctx, text, maxTextWidth);
   let y = PADDING + 150;
   for (const line of lines) {
     if (y + LINE_HEIGHT > CANVAS_SIZE - PADDING - 60) {
       ctx.fillStyle = 'rgba(240,230,255,0.5)';
-      ctx.font = '28px sans-serif';
+      ctx.font = '28px DejaVu Sans';
       ctx.fillText('...', PADDING, y);
       break;
     }
     ctx.fillStyle = '#f0e6ff';
-    ctx.font = `${FONT_SIZE}px sans-serif`;
+    ctx.font = `${FONT_SIZE}px DejaVu Sans`;
     ctx.fillText(line, PADDING, y);
     y += LINE_HEIGHT;
   }
 
   // Bottom: @bu.confess handle
   ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  ctx.font = '24px sans-serif';
+  ctx.font = '24px DejaVu Sans';
   ctx.fillText('@bu.confess', PADDING, CANVAS_SIZE - PADDING);
 
   // Bottom accent bar

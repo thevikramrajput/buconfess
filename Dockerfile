@@ -23,7 +23,7 @@ RUN npm run build
 # Runner stage
 FROM base AS runner
 WORKDIR /app
-RUN apk add --no-cache openssl fontconfig ttf-dejavu
+RUN apk add --no-cache openssl fontconfig ttf-dejavu && fc-cache -f
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 
