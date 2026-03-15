@@ -19,8 +19,7 @@
     "next": "^16.1.6",
     "prisma": "^5.13.0",
     "react": "^18",
-    "react-dom": "^18",
-    "sharp": "^0.33.3"
+    "react-dom": "^18"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
