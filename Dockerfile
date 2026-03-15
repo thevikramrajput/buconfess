@@ -12,7 +12,7 @@ RUN npx prisma generate
 # Build stage
 FROM base AS builder
 WORKDIR /app
-RUN apk add --no-cache libc6-compat openssl
+RUN apk add --no-cache openssl
 COPY package*.json ./
 COPY prisma ./prisma/
 RUN npm ci
@@ -23,7 +23,7 @@ RUN npm run build
 # Runner stage
 FROM base AS runner
 WORKDIR /app
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl fontconfig ttf-dejavu
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 
