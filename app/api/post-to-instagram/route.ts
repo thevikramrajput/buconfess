@@ -77,33 +77,33 @@ export async function POST(req: NextRequest) {
   const caption = `${prefix}Confession #${confession.number}\n\nDM or visit the link in bio to submit yours!\n\n${handle}`;
 
   try {
-    let igPostId: string;
 
-    if (parts.length === 1) {
-      // Single image post
-      const imageUrl = `${appUrl}/api/image/${id}/0`;
-      const containerId = await createMediaContainer(imageUrl, false, caption);
-      const result = await publishMedia(containerId);
-      igPostId = result.id;
-    } else {
-      // Carousel post for multi-part confessions
-      const childIds: string[] = [];
-      for (let i = 0; i < parts.length; i++) {
-        const imageUrl = `${appUrl}/api/image/${id}/${i}`;
-        const childId = await createMediaContainer(imageUrl, true);
-        childIds.push(childId);
-      }
-      const carouselId = await publishCarousel(childIds, caption);
-      const result = await publishMedia(carouselId);
-      igPostId = result.id;
-    }
+        // Send confession data to Make.com webhook for Instagram posting
+            const webhookUrl = process.env.MAKE_WEBHOOK_URL;
+                if (!webhookUrl) {
+                        throw new Error('Make.com webhook URL not configured');
+                            }
+
+                                // Prepare image URLs for the webhook
+                                    const imageUrls = parts.map((part: number) => `${appUrl}/api/image/${id}/${part}`);
+
+                                        // Send data to Make.com webhook
+                                            const webhookResponse = await fetch(webhookUrl, {
+                                                    method: 'POST',
+                                                          headers: { 'Content-Type': 'application/json' },
+                                                                body: JSON.stringify({
+                                                                          confessionId: id,
+                                                                                  imageUrls,
+                                                                                          caption,
+                                                                                                }),
+                                                                                                    });
 
     await prisma.confession.update({
       where: { id },
-      data: { status: 'posted', igPostId },
+      data: { status: 'posted' },
     });
 
-    return NextResponse.json({ success: true, igPostId });
+    return NextResponse.json({ success: true });
   } catch (e: any) {
     console.error('Instagram API error:', e.message);
     return NextResponse.json({ error: e.message }, { status: 500 });
