@@ -166,6 +166,40 @@ export default function AdminPage() {
                     <button onClick={() => generateImages(c.id)} disabled={isLoading} style={s.btn('#d97706', isLoading)}>
                       Regenerate Images
                     </button>
+
+                  {/* Download All Images button */}
+                  <button
+                    onClick={() => {
+                      const urls = JSON.parse(c.imageUrls || '[]');
+                      urls.forEach((url, i) => {
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `confession-${c.number}-part-${i+1}.jpg`;
+                        link.click();
+                      });
+                    }}
+                    className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded"
+                  >
+                    📥 Download All
+                  </button>
+
+                  {/* Send to Make.com button */}
+                  <button
+                    onClick={async () => {
+                      if (!confirm(`Send confession #${c.number} to Make.com for Instagram posting?`)) return;
+                      const res = await fetch('/api/admin/send-to-makecom', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: c.id }),
+                      });
+                      const data = await res.json();
+                      alert(data.message || data.error);
+                      fetchConfessions();
+                    }}
+                    className="bg-purple-500 hover:bg-purple-600 text-white py-1 px-3 rounded"
+                  >
+                    🚀 Send to Make.com
+                  </button>
                   )}
                   <button onClick={() => deleteConfession(c.id)} disabled={isLoading} style={s.btn('#7f1d1d', isLoading)}>Delete</button>
                 </div>
