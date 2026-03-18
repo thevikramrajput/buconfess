@@ -146,7 +146,7 @@ export default function AdminPage() {
                 <p style={{ color: '#ddd', lineHeight: '1.6', marginBottom: '16px', fontSize: '15px', whiteSpace: 'pre-wrap' }}>{c.text}</p>
                 {images.length > 0 && (
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', overflowX: 'auto', paddingBottom: '4px' }}>
-                    {images.map((url, i) => (
+                    {images.map((url: string, i: number) => (
                       <img key={i} src={url} alt={'Part ' + (i + 1)} style={{ width: '120px', height: '120px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #333', flexShrink: 0 }} />
                     ))}
                   </div>
@@ -172,7 +172,7 @@ export default function AdminPage() {
                   <button
                     onClick={() => {
                       const urls = JSON.parse(c.imageUrls || '[]');
-                      urls.forEach((url, i) => {
+                      urls.forEach((url: string, i: number) => {
                         const link = document.createElement('a');
                         link.href = url;
                         link.download = `confession-${c.number}-part-${i+1}.jpg`;
