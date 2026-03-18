@@ -166,6 +166,7 @@ export default function AdminPage() {
                     <button onClick={() => generateImages(c.id)} disabled={isLoading} style={s.btn('#d97706', isLoading)}>
                       Regenerate Images
                     </button>
+                                )}
 
                   {/* Download All Images button */}
                   <button
@@ -200,7 +201,6 @@ export default function AdminPage() {
                   >
                     🚀 Send to Make.com
                   </button>
-                  )}
                   <button onClick={() => deleteConfession(c.id)} disabled={isLoading} style={s.btn('#7f1d1d', isLoading)}>Delete</button>
                 </div>
               </div>
