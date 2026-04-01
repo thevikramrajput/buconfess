@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
   const webhookPayload = {
     confessionId: id,
-    caption: caption || confession.caption,
+    caption: caption || `Confession #${confession.number}`,
     imageUrls: absoluteImageUrls,
   };
 
