@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getAdminFromRequest } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
-  const admin = await getAdminFromRequest(req);
+  const admin = await getAdminFromRequest();
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id, caption } = await req.json();
@@ -19,37 +19,21 @@ export async function POST(req: NextRequest) {
     u.startsWith("http") ? u : `${baseUrl}${u}`
   );
 
-  const finalCaption = caption ||
-    `BU Confession #${confession.number}
-
-${absoluteImageUrls.length > 1 ? "(Swipe for more ➡️)" : ""}
-
-#BUConfessions #BennettUniversity`;
-
-  const payload = {
+  const webhookPayload = {
     confessionId: id,
-    confessionNumber: confession.number,
+    caption: caption || confession.caption,
     imageUrls: absoluteImageUrls,
-    caption: finalCaption,
-    totalParts: absoluteImageUrls.length,
   };
 
-  const res = await fetch(webhookUrl, {
+  const webhookRes = await fetch(webhookUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(webhookPayload),
   });
 
-  if (!res.ok) {
-    const text = await res.text();
-    return NextResponse.json({ error: `Make.com webhook failed: ${text}` }, { status: 500 });
+  if (!webhookRes.ok) {
+    return NextResponse.json({ error: "Webhook call failed", status: webhookRes.status }, { status: 500 });
   }
 
-  // Mark as posted
-  await prisma.confession.update({
-    where: { id },
-    data: { status: "posted" },
-  });
-
-  return NextResponse.json({ success: true, message: "Sent to Make.com for posting" });
+  return NextResponse.json({ success: true });
 }
