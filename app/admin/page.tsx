@@ -9,6 +9,7 @@ type Confession = {
   parts: string;
   imageUrls: string;
   igPostId?: string;
+  igPermalink?: string;
   createdAt: string;
 };
 
@@ -71,7 +72,11 @@ export default function AdminPage() {
       body: JSON.stringify({ id }),
     });
     const data = await res.json();
-    if (res.ok) { setMsg('Posted to Instagram! Post ID: ' + data.igPostId); fetchConfessions(); }
+    if (res.ok) {
+      const permalink = data.igPermalink ? ` Permalink: ${data.igPermalink}` : '';
+      setMsg(`Posted to Instagram! Post ID: ${data.igPostId}.${permalink}`);
+      fetchConfessions();
+    }
     else setMsg('Error: ' + data.error);
     setActionLoading(null);
   };
@@ -140,6 +145,11 @@ export default function AdminPage() {
                     <span style={{ color: '#666', fontSize: '13px' }}>#{c.number || c.id}</span>
                     <span style={s.badge(c.status)}>{c.status}</span>
                     {c.igPostId && <span style={{ color: '#4ade80', fontSize: '11px' }}>IG: {c.igPostId}</span>}
+                    {c.igPermalink && (
+                      <a href={c.igPermalink} target="_blank" rel="noreferrer" style={{ color: '#93c5fd', fontSize: '11px' }}>
+                        View post
+                      </a>
+                    )}
                   </div>
                   <span style={{ color: '#555', fontSize: '12px' }}>{new Date(c.createdAt).toLocaleString('en-IN')}</span>
                 </div>
@@ -166,40 +176,20 @@ export default function AdminPage() {
                     <button onClick={() => generateImages(c.id)} disabled={isLoading} style={s.btn('#d97706', isLoading)}>
                       Regenerate Images
                     </button>
-                                )}
-
-                  {/* Download All Images button */}
+                  )}
                   <button
                     onClick={() => {
                       const urls = JSON.parse(c.imageUrls || '[]');
                       urls.forEach((url: string, i: number) => {
                         const link = document.createElement('a');
                         link.href = url;
-                        link.download = `confession-${c.number}-part-${i+1}.jpg`;
+                        link.download = `confession-${c.number}-part-${i + 1}.jpg`;
                         link.click();
                       });
                     }}
                     className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded"
                   >
-                    📥 Download All
-                  </button>
-
-                  {/* Send to Make.com button */}
-                  <button
-                    onClick={async () => {
-                      if (!confirm(`Send confession #${c.number} to Make.com for Instagram posting?`)) return;
-                      const res = await fetch('/api/admin/send-to-makecom', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: c.id }),
-                      });
-                      const data = await res.json();
-                      alert(data.message || data.error);
-                      fetchConfessions();
-                    }}
-                    className="bg-purple-500 hover:bg-purple-600 text-white py-1 px-3 rounded"
-                  >
-                    🚀 Send to Make.com
+                    Download All
                   </button>
                   <button onClick={() => deleteConfession(c.id)} disabled={isLoading} style={s.btn('#7f1d1d', isLoading)}>Delete</button>
                 </div>
